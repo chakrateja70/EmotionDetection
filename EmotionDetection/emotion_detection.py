@@ -26,6 +26,7 @@ EMOTION_KEYWORDS = {
         "angry",
         "furious",
         "annoyed",
+        "mad",
         "hate",
         "rage",
         "irate",
