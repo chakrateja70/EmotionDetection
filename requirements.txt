@@ -1,0 +1,4 @@
+Flask>=2.3
+pytest>=9.0
+pycodestyle>=2.14
+ibm-watson>=6.0.0
