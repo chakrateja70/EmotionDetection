@@ -1,13 +1,17 @@
-# Emotion Detector
+# Final Project - Emotion Detector
 
-A small Flask-based Emotion Detector application using IBM Watson NLP when available, with a local fallback.
+Project Name: Final Project
+Repository Name: `oaqjp-final-project-emb-ai`
+
+A Flask-based Emotion Detector application that sends text to the Watson NLP endpoint and displays emotion scores in a browser interface.
 
 ## Files
 
-- `EmotionDetection/emotion_detection.py` - emotion detection logic and output formatting
+- `EmotionDetection/emotion_detection.py` - emotion detection logic using the Watson NLP endpoint
 - `EmotionDetection/__init__.py` - package entrypoint importing the application module
 - `server.py` - Flask web deployment and static analysis helper
-- `test_emotion_detection.py` - unit tests for emotion detection
+- `templates/index.html` - simple web interface for text analysis
+- `test_emotion_detection.py` - unittest tests for emotion detection
 - `requirements.txt` - development dependencies
 
 ## Installation
@@ -19,7 +23,7 @@ pip install -r requirements.txt
 ## Run unit tests
 
 ```bash
-pytest
+python test_emotion_detection.py
 ```
 
 ## Run the web server
@@ -28,8 +32,14 @@ pytest
 python server.py
 ```
 
+Open http://127.0.0.1:5000/ in your browser and submit text to analyze.
+
 ## Run static analysis
 
 ```bash
 python server.py --lint
 ```
+
+## Important
+
+To match the course requirement, this code should be pushed to a repository named `oaqjp-final-project-emb-ai`.

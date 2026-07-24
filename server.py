@@ -4,43 +4,30 @@ import argparse
 import subprocess
 from typing import Any, Dict
 
-from flask import Flask, jsonify, request
-from EmotionDetection import emotion_detector, format_emotion_output
+from flask import Flask, render_template, request
+from EmotionDetection.emotion_detection import emotion_detector
 
 app = Flask(__name__)
 
 
 @app.route("/", methods=["GET"])
 def home() -> Any:
-    return jsonify({"message": "Emotion Detector is running."}), 200
+    return render_template("index.html", response=None)
 
 
-@app.route("/predict", methods=["POST"])
-def predict() -> Any:
-    if request.is_json:
-        payload = request.get_json(silent=True)
-    else:
-        payload = request.form.to_dict()
-
-    if payload is None:
-        payload = {}
-
-    if isinstance(payload, dict):
-        text = payload.get("text", "")
-    else:
-        text = ""
-
-    if not isinstance(text, str) or not text.strip():
-        return jsonify(
-            {"status_code": 400, "message": "Text input cannot be blank."},
-        ), 400
-
-    result = emotion_detector(text)
-    formatted = format_emotion_output(result)
-
-    if formatted.get("status_code") != 200:
-        return jsonify(formatted), 400
-    return jsonify(formatted), 200
+@app.route("/emotionDetector", methods=["GET"])
+def emotion_detector_route() -> Any:
+    text_to_analyze = request.args.get("textToAnalyze", "")
+    response = emotion_detector(text_to_analyze)
+    formatted_text = (
+        f"anger: {response['anger']} | "
+        f"disgust: {response['disgust']} | "
+        f"fear: {response['fear']} | "
+        f"joy: {response['joy']} | "
+        f"sadness: {response['sadness']} | "
+        f"dominant_emotion: {response['dominant_emotion']}"
+    )
+    return render_template("index.html", response=formatted_text)
 
 
 def run_static_analysis() -> Dict[str, Any]:
@@ -51,19 +38,16 @@ def run_static_analysis() -> Dict[str, Any]:
     ]
     try:
         completed = subprocess.run(
-            ["pycodestyle", *files],
+            ["pylint", *files],
             capture_output=True,
             text=True,
             check=True,
         )
-        return {
-            "status_code": 0,
-            "message": "Static code analysis passed with no issues.",
-        }
+        return {"status_code": 0, "message": completed.stdout.strip()}
     except FileNotFoundError:
         return {
             "status_code": 1,
-            "message": "pycodestyle is not installed.",
+            "message": "pylint is not installed.",
         }
     except subprocess.CalledProcessError as exc:
         output = exc.stdout.strip() or exc.stderr.strip()

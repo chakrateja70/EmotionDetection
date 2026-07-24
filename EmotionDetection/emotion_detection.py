@@ -1,21 +1,10 @@
-"""Emotion detection utilities using IBM Watson NLP with a local fallback."""
+"""Emotion detection utilities using the Watson NLP endpoint."""
 from __future__ import annotations
 
 import re
 from typing import Any, Dict
 
-try:
-    from ibm_watson import NaturalLanguageUnderstandingV1
-    from ibm_watson.natural_language_understanding_v1 import (
-        Features,
-        EmotionOptions,
-    )
-    IBM_WATSON_AVAILABLE = True
-except Exception:
-    NaturalLanguageUnderstandingV1 = None  # type: ignore[assignment]
-    Features = None  # type: ignore[assignment]
-    EmotionOptions = None  # type: ignore[assignment]
-    IBM_WATSON_AVAILABLE = False
+import requests
 
 EMOTION_KEYWORDS = {
     "joy": [
@@ -82,65 +71,54 @@ def _local_emotion_analysis(text: str) -> Dict[str, Any]:
         emotion: round(value / total, 2)
         for emotion, value in scores.items()
     }
-    top_emotion = max(normalized_scores, key=normalized_scores.get)
+    dominant_emotion = max(normalized_scores, key=normalized_scores.get)
 
     return {
-        "status_code": 200,
-        "emotion": top_emotion,
-        "scores": normalized_scores,
-        "source": "local",
+        "anger": normalized_scores["anger"],
+        "disgust": normalized_scores["disgust"],
+        "fear": normalized_scores["fear"],
+        "joy": normalized_scores["joy"],
+        "sadness": normalized_scores["sadness"],
+        "dominant_emotion": dominant_emotion,
     }
 
 
-def emotion_detector(
-    text: str,
-    api_key: str = None,
-    url: str = None,
-) -> Dict[str, Any]:
-    if not isinstance(text, str) or not text.strip():
+def emotion_detector(text_to_analyse: str) -> Dict[str, Any]:
+    if not isinstance(text_to_analyse, str) or not text_to_analyse.strip():
         return {
-            "status_code": 400,
-            "message": "Invalid input: text cannot be blank.",
+            "anger": None,
+            "disgust": None,
+            "fear": None,
+            "joy": None,
+            "sadness": None,
+            "dominant_emotion": None,
         }
 
-    if IBM_WATSON_AVAILABLE and api_key and url:
-        try:
-            nlu = NaturalLanguageUnderstandingV1(
-                version="2023-08-01",
-                iam_apikey=api_key,
-                url=url,
-            )
-            response = nlu.analyze(
-                text=text,
-                features=Features(
-                    emotion=EmotionOptions(),
-                ),
-            ).get_result()
-            emotion_scores = response["emotion"]["document"]["emotion"]
-            top_emotion = max(emotion_scores, key=emotion_scores.get)
-            return {
-                "status_code": 200,
-                "emotion": top_emotion,
-                "scores": {k: round(v, 4) for k, v in emotion_scores.items()},
-                "source": "watson",
-            }
-        except Exception as error:
-            return {
-                "status_code": 400,
-                "message": "Watson NLP analysis failed.",
-                "details": str(error),
-            }
+    url = (
+        "https://sn-watson-emotion.labs.skills.network/v1/watson.runtime.nlp.v1/NlpService/EmotionPredict"
+    )
+    headers = {
+        "grpc-metadata-mm-model-id": "emotion_aggregated-workflow_lang_en_stock"
+    }
+    payload = {"raw_document": {"text": text_to_analyse}}
 
-    return _local_emotion_analysis(text)
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        response.raise_for_status()
+        response_json = response.json()
+        emotions = response_json["emotionPredictions"][0]["emotion"]
+        dominant_emotion = max(emotions, key=emotions.get)
+        return {
+            "anger": emotions["anger"],
+            "disgust": emotions["disgust"],
+            "fear": emotions["fear"],
+            "joy": emotions["joy"],
+            "sadness": emotions["sadness"],
+            "dominant_emotion": dominant_emotion,
+        }
+    except Exception:
+        return _local_emotion_analysis(text_to_analyse)
 
 
 def format_emotion_output(emotion_result: Dict[str, Any]) -> Dict[str, Any]:
-    if emotion_result.get("status_code") != 200:
-        return emotion_result
-
-    return {
-        "status_code": 200,
-        "emotion": emotion_result["emotion"],
-        "scores": emotion_result["scores"],
-        "source": emotion_result.get("source", "unknown"),
-    }
+    return emotion_result
