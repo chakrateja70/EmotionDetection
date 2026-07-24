@@ -1,3 +1,4 @@
+"""Flask server for the Emotion Detector application."""
 from __future__ import annotations
 
 import argparse
@@ -12,11 +13,13 @@ app = Flask(__name__)
 
 @app.route("/", methods=["GET"])
 def home() -> Any:
+    """Render the home page for text input."""
     return render_template("index.html", response=None)
 
 
 @app.route("/emotionDetector", methods=["GET"])
 def emotion_detector_route() -> Any:
+    """Analyze emotion for the provided text query parameter."""
     text_to_analyze = request.args.get("textToAnalyze", "")
     response = emotion_detector(text_to_analyze)
     formatted_text = (
@@ -27,10 +30,13 @@ def emotion_detector_route() -> Any:
         f"sadness: {response['sadness']} | "
         f"dominant_emotion: {response['dominant_emotion']}"
     )
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return formatted_text, 200
     return render_template("index.html", response=formatted_text)
 
 
 def run_static_analysis() -> Dict[str, Any]:
+    """Run pylint on project files and return the result."""
     files = [
         "server.py",
         "EmotionDetection/emotion_detection.py",

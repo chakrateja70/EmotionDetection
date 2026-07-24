@@ -1,6 +1,4 @@
-"""Emotion detection utilities using the Watson NLP endpoint."""
-from __future__ import annotations
-
+"""Emotion detection helper using Watson NLP endpoint and fallback logic."""
 import re
 from typing import Any, Dict
 
@@ -95,7 +93,8 @@ def emotion_detector(text_to_analyse: str) -> Dict[str, Any]:
         }
 
     url = (
-        "https://sn-watson-emotion.labs.skills.network/v1/watson.runtime.nlp.v1/NlpService/EmotionPredict"
+        "https://sn-watson-emotion.labs.skills.network/"
+        "v1/watson.runtime.nlp.v1/NlpService/EmotionPredict"
     )
     headers = {
         "grpc-metadata-mm-model-id": "emotion_aggregated-workflow_lang_en_stock"
@@ -103,7 +102,12 @@ def emotion_detector(text_to_analyse: str) -> Dict[str, Any]:
     payload = {"raw_document": {"text": text_to_analyse}}
 
     try:
-        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        response = requests.post(
+            url,
+            json=payload,
+            headers=headers,
+            timeout=10,
+        )
         response.raise_for_status()
         response_json = response.json()
         emotions = response_json["emotionPredictions"][0]["emotion"]
@@ -116,7 +120,7 @@ def emotion_detector(text_to_analyse: str) -> Dict[str, Any]:
             "sadness": emotions["sadness"],
             "dominant_emotion": dominant_emotion,
         }
-    except Exception:
+    except (requests.RequestException, ValueError, KeyError):
         return _local_emotion_analysis(text_to_analyse)
 
 
